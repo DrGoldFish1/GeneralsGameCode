@@ -89,6 +89,42 @@ struct AudioEventInfo : public MemoryPoolObject
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( AudioEventInfo, "AudioEventInfo" )
 
 public:
+	AudioEventInfo() : m_nextOverride(nullptr), m_isOverride(FALSE) {}
+
+	AudioEventInfo *getFinalOverride()
+	{
+		return m_nextOverride ? m_nextOverride->getFinalOverride() : this;
+	}
+
+	const AudioEventInfo *getFinalOverride() const
+	{
+		return m_nextOverride ? m_nextOverride->getFinalOverride() : this;
+	}
+
+	AudioEventInfo *createOverride(AudioEventInfo *replacement)
+	{
+		AudioEventInfo *current = getFinalOverride();
+		*replacement = *current;
+		replacement->m_nextOverride = nullptr;
+		replacement->m_isOverride = TRUE;
+		current->m_nextOverride = replacement;
+		return replacement;
+	}
+
+	void markAsOverride() { m_isOverride = TRUE; }
+
+	AudioEventInfo *deleteOverrides()
+	{
+		if (m_isOverride) {
+			deleteInstance(this);
+			return nullptr;
+		}
+		if (m_nextOverride) {
+			m_nextOverride = m_nextOverride->deleteOverrides();
+		}
+		return this;
+	}
+
 	AsciiString m_audioName;	// This name matches the name of the AudioEventRTS
 	AsciiString m_filename;		// For music tracks, this is the filename of the track
 
@@ -132,4 +168,8 @@ public:
 
 	static const FieldParse m_audioEventInfo[];		///< the parse table for INI definition
 	const FieldParse *getFieldParse() const { return m_audioEventInfo; }
+
+private:
+	AudioEventInfo *m_nextOverride;
+	Bool m_isOverride;
 };

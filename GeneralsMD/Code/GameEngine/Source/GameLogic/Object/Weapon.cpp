@@ -227,7 +227,7 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "HistoricBonusTime",				INI::parseDurationUnsignedInt,					nullptr,							offsetof(WeaponTemplate, m_historicBonusTime) },
 	{ "HistoricBonusRadius",			INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_historicBonusRadius) },
 	{ "HistoricBonusCount",				INI::parseInt,													nullptr,							offsetof(WeaponTemplate, m_historicBonusCount) },
-	{ "HistoricBonusWeapon",			INI::parseWeaponTemplate,								nullptr,							offsetof(WeaponTemplate, m_historicBonusWeapon) },
+	{ "HistoricBonusWeapon",			WeaponTemplate::parseHistoricBonusWeapon,			nullptr,							0 },
 	{ "LeechRangeWeapon",					INI::parseBool,													nullptr,							offsetof(WeaponTemplate, m_leechRangeWeapon) },
 	{ "ScatterTarget",						WeaponTemplate::parseScatterTarget,			nullptr,							0 },
 	{ "CapableOfFollowingWaypoints", INI::parseBool,											nullptr,							offsetof(WeaponTemplate, m_capableOfFollowingWaypoint) },
@@ -248,7 +248,7 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 //-------------------------------------------------------------------------------------------------
-WeaponTemplate::WeaponTemplate() : m_nextTemplate(nullptr)
+WeaponTemplate::WeaponTemplate()
 {
 
 	m_name													= "NoNameWeapon";
@@ -323,6 +323,7 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(nullptr)
 	m_damageStatusType							= OBJECT_STATUS_NONE;
 	m_suspendFXDelay								= 0;
 	m_dieOnDetonate						= FALSE;
+	m_isMapOnly							= FALSE;
 
 	m_historicDamageTriggerId = 0;
 }
@@ -330,8 +331,6 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(nullptr)
 //-------------------------------------------------------------------------------------------------
 WeaponTemplate::~WeaponTemplate()
 {
-	deleteInstance(m_nextTemplate);
-
 	// delete any extra-bonus that's present
 	deleteInstance(m_extraBonus);
 }
@@ -340,6 +339,15 @@ WeaponTemplate::~WeaponTemplate()
 void WeaponTemplate::reset()
 {
 	m_historicDamage.clear();
+}
+
+//-------------------------------------------------------------------------------------------------
+/*static*/ void WeaponTemplate::parseHistoricBonusWeapon(INI* ini, void *instance, void * /*store*/, const void* /*userData*/)
+{
+	WeaponTemplate* self = (WeaponTemplate*)instance;
+	const WeaponTemplate* weapon = nullptr;
+	INI::parseWeaponTemplate(ini, instance, &weapon, nullptr);
+	self->m_historicBonusWeapon = weapon;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1635,7 +1643,7 @@ const WeaponTemplate *WeaponStore::findWeaponTemplate( const AsciiString& name )
 		return nullptr;
 	const WeaponTemplate * wt = findWeaponTemplatePrivate( TheNameKeyGenerator->nameToKey( name ) );
 	DEBUG_ASSERTCRASH(wt != nullptr, ("Weapon %s not found!", name.str()));
-	return wt;
+	return wt ? static_cast<const WeaponTemplate *>(wt->getFinalOverride()) : nullptr;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1645,7 +1653,7 @@ const WeaponTemplate *WeaponStore::findWeaponTemplate( const char* name ) const
 		return nullptr;
 	const WeaponTemplate * wt = findWeaponTemplatePrivate( TheNameKeyGenerator->nameToKey( name ) );
 	DEBUG_ASSERTCRASH(wt != nullptr, ("Weapon %s not found!",name));
-	return wt;
+	return wt ? static_cast<const WeaponTemplate *>(wt->getFinalOverride()) : nullptr;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1684,11 +1692,8 @@ WeaponTemplate *WeaponStore::newOverride(WeaponTemplate *weaponTemplate)
 	if (!weaponTemplate)
 		return nullptr;
 
-	// allocate a new weapon
-	WeaponTemplate *wt = newInstance(WeaponTemplate);
-	(*wt) = (*weaponTemplate);
-	(wt)->friend_setNextTemplate(weaponTemplate);
-
+	WeaponTemplate *wt = weaponTemplate->createOverride(newInstance(WeaponTemplate));
+	wt->clearMapOnly();
 	return wt;
 }
 
@@ -1733,15 +1738,19 @@ void WeaponStore::resetWeaponTemplates()
 //-------------------------------------------------------------------------------------------------
 void WeaponStore::reset()
 {
-	// clean up any overrides.
-	for (size_t i = 0; i < m_weaponTemplateVector.size(); ++i)
+	for (size_t i = 0; i < m_weaponTemplateVector.size(); )
 	{
 		WeaponTemplate *wt = m_weaponTemplateVector[i];
-		if (wt->isOverride())
+		if (wt->isMapOnly())
 		{
-			WeaponTemplate *overrideData = wt;
-			wt = wt->friend_clearNextTemplate();
-			deleteInstance(overrideData);
+			m_weaponTemplateHashMap.erase(wt->getNameKey());
+			deleteInstance(wt);
+			m_weaponTemplateVector.erase(m_weaponTemplateVector.begin() + i);
+		}
+		else
+		{
+			wt->deleteOverrides();
+			++i;
 		}
 	}
 
@@ -1775,7 +1784,7 @@ void WeaponStore::postProcessLoad()
 	{
 		WeaponTemplate* wt = m_weaponTemplateVector[i];
 		if (wt)
-			wt->postProcessLoad();
+			static_cast<WeaponTemplate *>(wt->friend_getFinalOverride())->postProcessLoad();
 	}
 
 }
@@ -1806,6 +1815,8 @@ void WeaponStore::postProcessLoad()
 	{
 		// no item is present, create a new one
 		weapon = TheWeaponStore->newWeaponTemplate(name);
+		if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES)
+			weapon->markAsMapOnly();
 	}
 
 	// parse the ini weapon definition

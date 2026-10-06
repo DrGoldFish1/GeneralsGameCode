@@ -779,9 +779,13 @@ void GameEngine::reset()
 
 	WindowLayout *background = TheWindowManager->winCreateLayout("Menus/BlankWindow.wnd");
 	DEBUG_ASSERTCRASH(background,("We Couldn't Load Menus/BlankWindow.wnd"));
-	background->hide(FALSE);
-	background->bringForward();
-	background->getFirstWindow()->winClearStatus(WIN_STATUS_IMAGE);
+	// TheSuperHackers @bugfix Copilot 03/10/2026 Avoid dereferencing a missing blank layout during startup or shutdown.
+	if (background)
+	{
+		background->hide(FALSE);
+		background->bringForward();
+		background->getFirstWindow()->winClearStatus(WIN_STATUS_IMAGE);
+	}
 	Bool deleteNetwork = false;
 	if (TheGameLogic->isInMultiplayerGame())
 		deleteNetwork = true;

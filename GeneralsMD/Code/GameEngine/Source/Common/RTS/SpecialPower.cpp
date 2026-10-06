@@ -146,11 +146,7 @@ void SpecialPowerStore::parseSpecialPowerDefinition( INI *ini )
 	{
 		if (specialPower)
 		{
-			SpecialPowerTemplate* child = (SpecialPowerTemplate*)specialPower->friend_getFinalOverride();
-			specialPower = newInstance(SpecialPowerTemplate);
-			*specialPower = *child;
-			child->setNextOverride(specialPower);
-			specialPower->markAsOverride();
+			specialPower = specialPower->createOverride(newInstance(SpecialPowerTemplate));
 			//TheSpecialPowerStore->m_specialPowerTemplates.push_back(specialPower); // nope, do NOT do this
 		}
 		else

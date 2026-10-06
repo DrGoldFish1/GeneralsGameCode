@@ -136,14 +136,7 @@ CrateTemplate *CrateSystem::newCrateTemplateOverride( CrateTemplate *crateToOver
 	if (!crateToOverride) {
 		return nullptr;
 	}
-
-	CrateTemplate *newOverride = newInstance(CrateTemplate);
-	*newOverride = *crateToOverride;
-
-	newOverride->markAsOverride();
-
-	crateToOverride->setNextOverride(newOverride);
-	return newOverride;
+	return crateToOverride->createOverride(newInstance(CrateTemplate));
 }
 
 const CrateTemplate *CrateSystem::findCrateTemplate(AsciiString name) const

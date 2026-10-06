@@ -121,11 +121,19 @@ Bool WeaponTemplateSet::hasAnyWeapons() const
 }
 
 //-------------------------------------------------------------------------------------------------
+const WeaponTemplate* WeaponTemplateSet::getNth(WeaponSlotType n) const
+{
+	return m_template[n];
+}
+
+//-------------------------------------------------------------------------------------------------
 void WeaponTemplateSet::parseWeapon(INI* ini, void *instance, void * /*store*/, const void* userData)
 {
 	WeaponTemplateSet* self = (WeaponTemplateSet*)instance;
 	WeaponSlotType wslot = (WeaponSlotType)INI::scanIndexList(ini->getNextToken(), TheWeaponSlotTypeNames);
-	INI::parseWeaponTemplate(ini, instance, &self->m_template[wslot], nullptr);
+	const WeaponTemplate* weapon = nullptr;
+	INI::parseWeaponTemplate(ini, instance, &weapon, nullptr);
+	self->m_template[wslot] = weapon;
 }
 
 //-------------------------------------------------------------------------------------------------

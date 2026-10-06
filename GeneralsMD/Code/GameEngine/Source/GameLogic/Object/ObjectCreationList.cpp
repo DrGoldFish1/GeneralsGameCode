@@ -1591,6 +1591,8 @@ Object* ObjectCreationList::createInternal( const Object* primary, const Object*
 
 //-------------------------------------------------------------------------------------------------
 ObjectCreationListStore::ObjectCreationListStore()
+	: m_hasOverrides(false),
+		m_isLoadingOverrides(false)
 {
 }
 
@@ -1625,6 +1627,43 @@ const ObjectCreationList *ObjectCreationListStore::findObjectCreationList(const 
 void ObjectCreationListStore::addObjectCreationNugget(ObjectCreationNugget* nugget)
 {
 	m_nuggets.push_back(nugget);
+	if (m_isLoadingOverrides)
+	{
+		m_overrideNuggets.push_back(nugget);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void ObjectCreationListStore::reset()
+{
+	if (!m_hasOverrides)
+	{
+		return;
+	}
+
+	// TheSuperHackers @bugfix Copilot 03/10/2026 Restore in place because game data retains pointers to OCL map entries.
+	for (ObjectCreationListMap::iterator i = m_ocls.begin(); i != m_ocls.end(); )
+	{
+		ObjectCreationListMap::const_iterator original = m_originalOcls.find(i->first);
+		if (original == m_originalOcls.end())
+		{
+			m_ocls.erase(i++);
+		}
+		else
+		{
+			i->second = original->second;
+			++i;
+		}
+	}
+	m_originalOcls.clear();
+	m_hasOverrides = false;
+
+	for (ObjectCreationNuggetVector::iterator i = m_overrideNuggets.begin(); i != m_overrideNuggets.end(); ++i)
+	{
+		deleteInstance(*i);
+	}
+	m_nuggets.resize(m_nuggets.size() - m_overrideNuggets.size());
+	m_overrideNuggets.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1633,9 +1672,20 @@ void ObjectCreationListStore::addObjectCreationNugget(ObjectCreationNugget* nugg
 	// read the ObjectCreationList name
 	const char *c = ini->getNextToken();
 	NameKeyType key = TheNameKeyGenerator->nameToKey(c);
+	if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES)
+	{
+		// TheSuperHackers @bugfix DrGoldFish1 25/02/2025 Restores ObjectCreationList definitions after map.ini overrides.
+		if (!TheObjectCreationListStore->m_hasOverrides)
+		{
+			TheObjectCreationListStore->m_originalOcls = TheObjectCreationListStore->m_ocls;
+			TheObjectCreationListStore->m_hasOverrides = true;
+		}
+		TheObjectCreationListStore->m_isLoadingOverrides = true;
+	}
 	ObjectCreationList& ocl = TheObjectCreationListStore->m_ocls[key];
 	ocl.clear();
 	ini->initFromINI(&ocl, TheObjectCreationListFieldParse);
+	TheObjectCreationListStore->m_isLoadingOverrides = false;
 }
 
 //-------------------------------------------------------------------------------------------------

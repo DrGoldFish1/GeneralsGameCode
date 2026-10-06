@@ -139,15 +139,7 @@ void RankInfoStore::friend_parseRankDefinition( INI* ini )
 				DEBUG_CRASH(("Rank not found in map.ini"));
 				throw INI_INVALID_DATA;
 			}
-
-			RankInfo* newInfo = newInstance(RankInfo);
-
-			// copy data from final override to 'newInfo' as a set of initial default values
-			info = (RankInfo*)(info->friend_getFinalOverride());
-
-			*newInfo = *info;
-			info->setNextOverride(newInfo);
-			newInfo->markAsOverride();	// must do AFTER the copy
+			RankInfo* newInfo = info->createOverride(newInstance(RankInfo));
 
 			ini->initFromINI(newInfo, myFieldParse);
 			//TheRankInfoStore->m_rankInfos.push_back(newInfo);	// NO, BAD, WRONG -- don't add in this case.

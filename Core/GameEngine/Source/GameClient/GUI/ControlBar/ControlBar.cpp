@@ -603,6 +603,10 @@ CommandButton::~CommandButton()
 //-------------------------------------------------------------------------------------------------
 Bool CommandButton::isValidRelationshipTarget(Relationship r) const
 {
+	const CommandButton *finalButton = static_cast<const CommandButton *>(getFinalOverride());
+	if (finalButton != this)
+		return finalButton->isValidRelationshipTarget(r);
+
 	UnsignedInt mask = 0;
 	if (r == ENEMIES) mask |= NEED_TARGET_ENEMY_OBJECT;
 	else if (r == ALLIES) mask |= NEED_TARGET_ALLY_OBJECT;
@@ -614,6 +618,10 @@ Bool CommandButton::isValidRelationshipTarget(Relationship r) const
 //-------------------------------------------------------------------------------------------------
 Bool CommandButton::isValidObjectTarget(const Player* sourcePlayer, const Object* targetObj) const
 {
+	const CommandButton *finalButton = static_cast<const CommandButton *>(getFinalOverride());
+	if (finalButton != this)
+		return finalButton->isValidObjectTarget(sourcePlayer, targetObj);
+
 	if (!sourcePlayer || !targetObj)
 		return false;
 
@@ -625,6 +633,10 @@ Bool CommandButton::isValidObjectTarget(const Player* sourcePlayer, const Object
 //-------------------------------------------------------------------------------------------------
 Bool CommandButton::isValidObjectTarget(const Object* sourceObj, const Object* targetObj) const
 {
+	const CommandButton *finalButton = static_cast<const CommandButton *>(getFinalOverride());
+	if (finalButton != this)
+		return finalButton->isValidObjectTarget(sourceObj, targetObj);
+
 	if (!sourceObj || !targetObj)
 		return false;
 
@@ -636,6 +648,10 @@ Bool CommandButton::isValidObjectTarget(const Object* sourceObj, const Object* t
 //-------------------------------------------------------------------------------------------------
 Bool CommandButton::isValidToUseOn(const Object *sourceObj, const Object *targetObj, const Coord3D *targetLocation, CommandSourceType commandSource) const
 {
+	const CommandButton *finalButton = static_cast<const CommandButton *>(getFinalOverride());
+	if (finalButton != this)
+		return finalButton->isValidToUseOn(sourceObj, targetObj, targetLocation, commandSource);
+
 	if (m_upgradeTemplate) {
 		// @todo: Make a const version of pui. We're not altering the production queue, so this const-cast
 		// is okay.
@@ -692,6 +708,10 @@ Bool CommandButton::isValidToUseOn(const Object *sourceObj, const Object *target
 //-------------------------------------------------------------------------------------------------
 Bool CommandButton::isReady(const Object *sourceObj) const
 {
+	const CommandButton *finalButton = static_cast<const CommandButton *>(getFinalOverride());
+	if (finalButton != this)
+		return finalButton->isReady(sourceObj);
+
 	SpecialPowerModuleInterface *mod = sourceObj->getSpecialPowerModule( m_specialPower );
 	if( mod && mod->getPercentReady() == 1.0f )
 		return true;
@@ -744,6 +764,10 @@ const FieldParse CommandSet::m_commandSetFieldParseTable[] =
 //-------------------------------------------------------------------------------------------------
 Bool CommandButton::isContextCommand() const
 {
+	const CommandButton *finalButton = static_cast<const CommandButton *>(getFinalOverride());
+	if (finalButton != this)
+		return finalButton->isContextCommand();
+
 	return BitIsSet( m_options, CONTEXTMODE_COMMAND );
 }
 
@@ -1985,18 +2009,7 @@ CommandButton *ControlBar::newCommandButtonOverride( CommandButton *buttonToOver
 	if (!buttonToOverride) {
 		return nullptr;
 	}
-
-	CommandButton *newOverride;
-
-	// allocate new button
-	newOverride = newInstance(CommandButton);
-
-	*newOverride = *buttonToOverride;
-
-	newOverride->markAsOverride();
-	buttonToOverride->setNextOverride(newOverride);
-
-	return newOverride;
+	return buttonToOverride->createOverride(newInstance(CommandButton));
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2107,18 +2120,7 @@ CommandSet *ControlBar::newCommandSetOverride( CommandSet *setToOverride )
 		return nullptr;
 	}
 
-	// allocate a new set
-	CommandSet* set = newInstance(CommandSet)(setToOverride->getName());
-
-	// it's an override; DON'T add it to the main list.
-	// !!! DO NOT DO THIS !!! -- > set->friend_addToList(&m_commandSets); <-- !!! DO NOT DO THIS !!!
-
-	*set = *setToOverride;
-	set->markAsOverride();
-
-	setToOverride->setNextOverride(set);
-
-	return set;
+	return setToOverride->createOverride(newInstance(CommandSet)(setToOverride->getName()));
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2549,6 +2551,11 @@ void CommandButton::cacheButtonImage()
 	}
 }
 
+void ControlBar::refreshCommandButtonImages()
+{
+	postProcessCommands();
+}
+
 //-------------------------------------------------------------------------------------------------
 /** post process step, after all commands and command sets are loaded */
 //-------------------------------------------------------------------------------------------------
@@ -2556,7 +2563,8 @@ void ControlBar::postProcessCommands()
 {
 	for ( CommandButton *button = m_commandButtons; button; button = button->friend_getNext() )
 	{
-		button->cacheButtonImage();
+		// TheSuperHackers @bugfix GitHub Copilot 01/01/2025 Cache the image from the active map override.
+		static_cast<CommandButton *>(button->friend_getFinalOverride())->cacheButtonImage();
 	}
 }
 

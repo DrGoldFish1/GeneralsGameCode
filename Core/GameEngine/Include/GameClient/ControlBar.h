@@ -326,26 +326,27 @@ public:
 	Bool isValidToUseOn(const Object *sourceObj, const Object *targetObj, const Coord3D *targetLocation, CommandSourceType commandSource) const;
 	Bool isReady(const Object *sourceObj) const;
 
-	const AsciiString& getName() const { return m_name; }
-	const AsciiString& getCursorName() const { return m_cursorName; }
-	const AsciiString& getInvalidCursorName() const { return m_invalidCursorName; }
-	const AsciiString& getTextLabel() const { return m_textLabel; }
-	const AsciiString& getDescriptionLabel() const { return m_descriptionLabel; }
-	const AsciiString& getPurchasedLabel() const { return m_purchasedLabel; }
-	const AsciiString& getConflictingLabel() const { return m_conflictingLabel; }
-	const AudioEventRTS* getUnitSpecificSound() const { return &m_unitSpecificSound; }
+	// TheSuperHackers @bugfix GitHub Copilot 07/04/2026 Read command button data from map overrides.
+	const AsciiString& getName() const { return getFinalCommandButton()->m_name; }
+	const AsciiString& getCursorName() const { return getFinalCommandButton()->m_cursorName; }
+	const AsciiString& getInvalidCursorName() const { return getFinalCommandButton()->m_invalidCursorName; }
+	const AsciiString& getTextLabel() const { return getFinalCommandButton()->m_textLabel; }
+	const AsciiString& getDescriptionLabel() const { return getFinalCommandButton()->m_descriptionLabel; }
+	const AsciiString& getPurchasedLabel() const { return getFinalCommandButton()->m_purchasedLabel; }
+	const AsciiString& getConflictingLabel() const { return getFinalCommandButton()->m_conflictingLabel; }
+	const AudioEventRTS* getUnitSpecificSound() const { return &getFinalCommandButton()->m_unitSpecificSound; }
 
-	GUICommandType getCommandType() const { return m_command; }
-	UnsignedInt getOptions() const { return m_options; }
-	OVERRIDE<ThingTemplate> getThingTemplate() const { return m_thingTemplate; }
-	const UpgradeTemplate* getUpgradeTemplate() const { return m_upgradeTemplate; }
-	const SpecialPowerTemplate* getSpecialPowerTemplate() const { return m_specialPower; }
-	RadiusCursorType getRadiusCursorType() const { return m_radiusCursor; }
-	WeaponSlotType getWeaponSlot() const { return m_weaponSlot; }
-	Int getMaxShotsToFire() const { return m_maxShotsToFire; }
-	const ScienceVec& getScienceVec() const { return m_science; }
-	CommandButtonMappedBorderType getCommandButtonMappedBorderType() const { return m_commandButtonBorder; }
-	const Image* getButtonImage() const { return m_buttonImage;	}
+	GUICommandType getCommandType() const { return getFinalCommandButton()->m_command; }
+	UnsignedInt getOptions() const { return getFinalCommandButton()->m_options; }
+	OVERRIDE<ThingTemplate> getThingTemplate() const { return getFinalCommandButton()->m_thingTemplate; }
+	const UpgradeTemplate* getUpgradeTemplate() const { return getFinalCommandButton()->m_upgradeTemplate; }
+	const SpecialPowerTemplate* getSpecialPowerTemplate() const { return getFinalCommandButton()->m_specialPower; }
+	RadiusCursorType getRadiusCursorType() const { return getFinalCommandButton()->m_radiusCursor; }
+	WeaponSlotType getWeaponSlot() const { return getFinalCommandButton()->m_weaponSlot; }
+	Int getMaxShotsToFire() const { return getFinalCommandButton()->m_maxShotsToFire; }
+	const ScienceVec& getScienceVec() const { return getFinalCommandButton()->m_science; }
+	CommandButtonMappedBorderType getCommandButtonMappedBorderType() const { return getFinalCommandButton()->m_commandButtonBorder; }
+	const Image* getButtonImage() const { return getFinalCommandButton()->m_buttonImage;	}
 	void cacheButtonImage();
 
 	GameWindow* getWindow() const { return m_window;	}
@@ -371,6 +372,8 @@ public:
 	CommandButton* friend_getNext() { return m_next; }
 
 private:
+	const CommandButton *getFinalCommandButton() const { return static_cast<const CommandButton *>(getFinalOverride()); }
+
 	AsciiString										m_name;												///< template name
 	GUICommandType								m_command;										///< type of command this button
 	CommandButton*								m_next;
@@ -670,6 +673,7 @@ public:
 
 	void onPlayerRankChanged(const Player *p);
 	void onPlayerSciencePurchasePointsChanged(const Player *p);
+	void refreshCommandButtonImages();
 
 	/** if this button is part of the context sensitive command system, process a button click
 	the gadgetMessage is either a GBM_SELECTED or GBM_SELECTED_RIGHT */

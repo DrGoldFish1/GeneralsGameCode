@@ -30,6 +30,7 @@
 #include "Common/GameType.h"
 #include "Common/KindOf.h"
 #include "Common/ModelState.h"
+#include "Common/Override.h"
 #include "Common/SparseMatchFinder.h"
 #include "Common/Snapshot.h"
 #include "GameLogic/Damage.h"
@@ -106,7 +107,8 @@ class WeaponTemplateSet
 private:
 	const ThingTemplate*		m_thingTemplate;	// needed for save/load
 	WeaponSetFlags					m_types;
-	const WeaponTemplate*		m_template[WEAPONSLOT_COUNT];
+	// TheSuperHackers @bugfix GitHubCopilot 14/08/2026 Resolve map weapon overrides through object weapon sets.
+	OVERRIDE<WeaponTemplate>	m_template[WEAPONSLOT_COUNT];
 	UnsignedInt							m_autoChooseMask[WEAPONSLOT_COUNT];
 	KindOfMaskType					m_preferredAgainst[WEAPONSLOT_COUNT];
 	Bool										m_isReloadTimeShared;
@@ -132,7 +134,7 @@ public:
 	Bool isWeaponLockSharedAcrossSets() const {return m_isWeaponLockSharedAcrossSets; }
 
 	Bool hasAnyWeapons() const;
-	const WeaponTemplate* getNth(WeaponSlotType n) const { return m_template[n]; }
+	const WeaponTemplate* getNth(WeaponSlotType n) const;
 	UnsignedInt getNthCommandSourceMask(WeaponSlotType n) const { return m_autoChooseMask[n]; }
 	const KindOfMaskType& getNthPreferredAgainstMask(WeaponSlotType n) const { return m_preferredAgainst[n]; }
 

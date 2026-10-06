@@ -163,6 +163,7 @@ AudioManager::AudioManager() :
 	m_audioRequests.clear();
 	m_listenerPosition.zero();
 	m_musicTracks.clear();
+	m_levelSpecificMusicTracks.clear();
 	m_musicVolume = 0.0f;
 	m_sound3DVolume = 0.0f;
 	m_soundVolume   = 0.0f;
@@ -512,9 +513,12 @@ Bool AudioManager::isValidAudioEvent( AudioEventRTS *eventToCheck ) const
 }
 
 //-------------------------------------------------------------------------------------------------
-void AudioManager::addTrackName( const AsciiString& trackName )
+void AudioManager::addTrackName( const AsciiString& trackName, Bool levelSpecific )
 {
 	m_musicTracks.push_back(trackName);
+	if (levelSpecific) {
+		m_levelSpecificMusicTracks.push_back(trackName);
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -840,15 +844,22 @@ void AudioManager::processRequestList()
 }
 
 //-------------------------------------------------------------------------------------------------
-AudioEventInfo *AudioManager::newAudioEventInfo( AsciiString audioName )
+AudioEventInfo *AudioManager::newAudioEventInfo( AsciiString audioName, Bool createOverride )
 {
-	AudioEventInfo *eventInfo = findAudioEventInfo(audioName);
+	AudioEventInfoHash::iterator it = m_allAudioEventInfo.find(audioName);
+	AudioEventInfo *eventInfo = it != m_allAudioEventInfo.end() ? it->second : nullptr;
 	if (eventInfo) {
+		if (createOverride) {
+			return eventInfo->createOverride(newInstance(AudioEventInfo));
+		}
 		DEBUG_CRASH(("Requested add of '%s' multiple times. Is this intentional? - jkmcd", audioName.str()));
-		return eventInfo;
+		return eventInfo->getFinalOverride();
 	}
 
 	m_allAudioEventInfo[audioName] = newInstance(AudioEventInfo);
+	if (createOverride) {
+		m_allAudioEventInfo[audioName]->markAsOverride();
+	}
 	return m_allAudioEventInfo[audioName];
 }
 
@@ -878,7 +889,7 @@ AudioEventInfo *AudioManager::findAudioEventInfo( AsciiString eventName ) const
 		return nullptr;
 	}
 
-	return (*it).second;
+	return (*it).second->getFinalOverride();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -892,11 +903,23 @@ void AudioManager::removeLevelSpecificAudioEventInfos()
     AudioEventInfoHash::iterator next = it; // Make sure erase doesn't cause problems
     next++;
 
-    if ( it->second->isLevelSpecific() )
+		if ( it->second->isLevelSpecific() )
     {
       deleteInstance(it->second);
       m_allAudioEventInfo.erase( it );
     }
+		else
+		{
+			AudioEventInfo *eventInfo = it->second->deleteOverrides();
+			if ( eventInfo )
+			{
+				it->second = eventInfo;
+			}
+			else
+			{
+				m_allAudioEventInfo.erase( it );
+			}
+		}
 
     it = next;
   }
@@ -964,7 +987,7 @@ void AudioManager::findAllAudioEventsOfType( AudioType audioType, std::vector<Au
 {
 	AudioEventInfoHashIt it;
 	for (it = m_allAudioEventInfo.begin(); it != m_allAudioEventInfo.end(); ++it) {
-		AudioEventInfo *aud = (*it).second;
+		AudioEventInfo *aud = (*it).second->getFinalOverride();
 		if (aud->m_soundType == audioType) {
 			allEvents.push_back(aud);
 		}

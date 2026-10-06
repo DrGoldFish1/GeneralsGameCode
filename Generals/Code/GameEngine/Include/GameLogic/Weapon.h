@@ -32,6 +32,8 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/AudioEventRTS.h"
 #include "Common/GameCommon.h"
+#include "Common/Override.h"
+#include "Common/Overridable.h"
 
 #include "GameLogic/Damage.h"
 
@@ -339,7 +341,7 @@ struct HistoricWeaponDamageInfo
 typedef std::list<HistoricWeaponDamageInfo> HistoricWeaponDamageList;
 
 //-------------------------------------------------------------------------------------------------
-class WeaponTemplate : public MemoryPoolObject
+class WeaponTemplate : public Overridable
 {
 	friend class WeaponStore;
 
@@ -352,9 +354,9 @@ public:
 
 	void reset();
 
-	void friend_setNextTemplate(WeaponTemplate *nextTemplate) { m_nextTemplate = nextTemplate; }
-	WeaponTemplate *friend_clearNextTemplate() {	WeaponTemplate *ret = m_nextTemplate; m_nextTemplate = nullptr; return ret; }
-	Bool isOverride() { return m_nextTemplate != nullptr; }
+	void markAsMapOnly() { m_isMapOnly = TRUE; }
+	void clearMapOnly() { m_isMapOnly = FALSE; }
+	Bool isMapOnly() const { return m_isMapOnly; }
 
 	/// field table for loading the values from an INI
 	const FieldParse *getFieldParse() const { return TheWeaponTemplateFieldParseTable; }
@@ -473,11 +475,10 @@ protected:
 	void processHistoricDamage(const Object* source, const Coord3D* pos) const;
 
 private:
-
-	// NOTE: m_nextTemplate will be cleaned up if it is NON-nullptr.
-	WeaponTemplate *m_nextTemplate;
+	Bool m_isMapOnly;
 
 	static void parseWeaponBonusSet( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ );
+	static void parseHistoricBonusWeapon( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ );
 	static void parseScatterTarget( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ );
 	static void parseShotDelay( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ );
 
@@ -536,7 +537,7 @@ private:
 	UnsignedInt m_historicBonusTime;				///< if 'count' instances of this weapon do damage within 'time' and 'radius' from each other, fire the historic bonus weapon
 	Real m_historicBonusRadius;							///< see above
 	Int m_historicBonusCount;								///< see above
-	const WeaponTemplate* m_historicBonusWeapon;	///< see above
+	OVERRIDE<WeaponTemplate> m_historicBonusWeapon;	///< see above
 	Bool m_leechRangeWeapon;								///< once the weapon has fired once at the proper range, the weapon gains unlimited range for the remainder of the attack cycle
 	Bool m_capableOfFollowingWaypoint;			///< determines if the weapon is capable of following a waypoint path.
 	Bool m_isShowsAmmoPips;									///< shows ammo pips
@@ -769,7 +770,8 @@ protected:
 
 
 private:
-	const WeaponTemplate*			m_template;									///< the kind of weapon this is
+	// TheSuperHackers @bugfix GitHubCopilot 14/08/2026 Resolve map weapon overrides through retained weapon instances.
+	OVERRIDE<WeaponTemplate>		m_template;									///< the kind of weapon this is
 	WeaponSlotType						m_wslot;										///< are we primary, secondary, etc. weapon? (used for projectile placement on reload)
 	mutable WeaponStatus			m_status;										///< weapon status
 	UnsignedInt								m_ammoInClip;								///< how many shots left in current clip
@@ -816,7 +818,7 @@ public:
 	*/
 	const WeaponTemplate *findWeaponTemplate(const AsciiString& name) const;
 	const WeaponTemplate *findWeaponTemplate(const char* name) const;
-	const WeaponTemplate *findWeaponTemplateByNameKey( NameKeyType key ) const { return findWeaponTemplatePrivate( key ); }
+	const WeaponTemplate *findWeaponTemplateByNameKey( NameKeyType key ) const { WeaponTemplate *weapon = findWeaponTemplatePrivate( key ); return weapon ? static_cast<const WeaponTemplate *>(weapon->getFinalOverride()) : nullptr; }
 
 	// this dynamically allocates a new Weapon, which is owned (and must be freed!) by the caller.
 	Weapon* allocateNewWeapon(const WeaponTemplate *tmpl, WeaponSlotType wslot) const

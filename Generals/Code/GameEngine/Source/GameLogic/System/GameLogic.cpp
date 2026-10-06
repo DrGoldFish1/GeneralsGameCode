@@ -52,6 +52,7 @@
 #include "Common/Recorder.h"
 #include "Common/StatsCollector.h"
 #include "Common/ThingFactory.h"
+#include "Common/Upgrade.h"
 #include "Common/Team.h"
 #include "Common/ThingTemplate.h"
 #include "GameClient/Water.h"
@@ -2214,6 +2215,11 @@ void GameLogic::loadMapINI( AsciiString mapName )
 		INI ini;
 		ini.load( AsciiString(fullFledgeFilename), INI_LOAD_CREATE_OVERRIDES, nullptr );
 	}
+
+	TheThingFactory->postProcessLoad();
+	TheWeaponStore->postProcessLoad();
+	TheControlBar->refreshCommandButtonImages();
+	TheUpgradeCenter->refreshButtonImages();
 
 	// No error here. There could've just *not* been a map.ini file.
 

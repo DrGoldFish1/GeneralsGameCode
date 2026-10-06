@@ -49,17 +49,21 @@ void INI::parseMusicTrackDefinition( INI* ini )
 	const char* c = ini->getNextToken();
 	name.set( c );
 
-	track = TheAudio->newAudioEventInfo( name );
+	Bool isMapOverride = ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES && TheAudio->findAudioEventInfo(name) != nullptr;
+	track = TheAudio->newAudioEventInfo( name, ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES );
 	if (!track) {
 		return;
 	}
 
-	AudioEventInfo *defaultInfo = TheAudio->findAudioEventInfo("DefaultMusicTrack");
-	if (defaultInfo) {
-		(*track) = (*defaultInfo);
-		TheAudio->addTrackName( name );
+	if (!isMapOverride) {
+		AudioEventInfo *defaultInfo = TheAudio->findAudioEventInfo("DefaultMusicTrack");
+		if (defaultInfo) {
+			(*track) = (*defaultInfo);
+			TheAudio->addTrackName( name, ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES );
+		}
 	}
 
+	// TheSuperHackers @feature Copilot 03/02/2025 Allows map.ini files to override music tracks.
 	track->m_audioName = name;
 	track->m_soundType = AT_Music;
 
@@ -77,16 +81,20 @@ void INI::parseAudioEventDefinition( INI* ini )
 	const char* c = ini->getNextToken();
 	name.set( c );
 
-	track = TheAudio->newAudioEventInfo( name );
+	Bool isMapOverride = ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES && TheAudio->findAudioEventInfo(name) != nullptr;
+	track = TheAudio->newAudioEventInfo( name, ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES );
 	if (!track) {
 		return;
 	}
 
-	AudioEventInfo *defaultInfo = TheAudio->findAudioEventInfo("DefaultSoundEffect");
-	if (defaultInfo) {
-		(*track) = (*defaultInfo);
+	if (!isMapOverride) {
+		AudioEventInfo *defaultInfo = TheAudio->findAudioEventInfo("DefaultSoundEffect");
+		if (defaultInfo) {
+			(*track) = (*defaultInfo);
+		}
 	}
 
+	// TheSuperHackers @feature Copilot 03/02/2025 Allows map.ini files to override audio events.
 	track->m_audioName = name;
 	track->m_soundType = AT_SoundEffect;
 
@@ -104,16 +112,20 @@ void INI::parseDialogDefinition( INI* ini )
 	const char* c = ini->getNextToken();
 	name.set( c );
 
-	track = TheAudio->newAudioEventInfo( name );
+	Bool isMapOverride = ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES && TheAudio->findAudioEventInfo(name) != nullptr;
+	track = TheAudio->newAudioEventInfo( name, ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES );
 	if (!track) {
 		return;
 	}
 
-	AudioEventInfo *defaultInfo = TheAudio->findAudioEventInfo("DefaultDialog");
-	if (defaultInfo) {
-		(*track) = (*defaultInfo);
+	if (!isMapOverride) {
+		AudioEventInfo *defaultInfo = TheAudio->findAudioEventInfo("DefaultDialog");
+		if (defaultInfo) {
+			(*track) = (*defaultInfo);
+		}
 	}
 
+	// TheSuperHackers @feature Copilot 03/02/2025 Allows map.ini files to override dialog events.
 	track->m_audioName = name;
 	track->m_soundType = AT_Streaming;
 

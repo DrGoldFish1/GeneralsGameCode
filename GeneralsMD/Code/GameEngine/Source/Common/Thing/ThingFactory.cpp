@@ -176,18 +176,8 @@ ThingTemplate* ThingFactory::newOverride( ThingTemplate *thingTemplate )
 										 ("newOverride(): Thing template '%s' not in master list",
 										 thingTemplate->getName().str()) );
 
-	// find final override of the 'parent' template
-	ThingTemplate *child = (ThingTemplate*) thingTemplate->friend_getFinalOverride();
-
-	// allocate new template
-	ThingTemplate *newTemplate = newInstance(ThingTemplate);
-
-	// copy data from final override to 'newTemplate' as a set of initial default values
-	*newTemplate = *child;
+	ThingTemplate *newTemplate = thingTemplate->createOverride(newInstance(ThingTemplate));
 	newTemplate->setCopiedFromDefault();
-
-	newTemplate->markAsOverride();
-	child->setNextOverride(newTemplate);
 
 	// return the newly created override for us to set values with etc
 	return newTemplate;
@@ -257,12 +247,21 @@ void ThingFactory::update()
 //-------------------------------------------------------------------------------------------------
 /** Return the template with the matching database name */
 //-------------------------------------------------------------------------------------------------
+const ThingTemplate *ThingFactory::findTemplate( const AsciiString& name, Bool check )
+{
+	ThingTemplate *tmpl = findTemplateInternal( name, check );
+	return tmpl ? static_cast<const ThingTemplate *>(tmpl->getFinalOverride()) : nullptr;
+}
+
+//-------------------------------------------------------------------------------------------------
+/** Return the template with the matching database name */
+//-------------------------------------------------------------------------------------------------
 const ThingTemplate *ThingFactory::findByTemplateID( UnsignedShort id )
 {
 	for (ThingTemplate *tmpl = m_firstTemplate; tmpl; tmpl = tmpl->friend_getNextTemplate())
 	{
 		if (tmpl->getTemplateID() == id)
-			return tmpl;
+			return static_cast<const ThingTemplate *>(tmpl->getFinalOverride());
 	}
 	DEBUG_CRASH(("template %d not found",(Int)id));
 	return nullptr;

@@ -128,13 +128,7 @@ void INI::parseWeatherDefinition( INI *ini )
 		TheWeatherSetting = newInstance(WeatherSetting);
 	} else if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES) {
 		WeatherSetting* ws = (WeatherSetting*) (TheWeatherSetting.getNonOverloadedPointer());
-		WeatherSetting* wsOverride = newInstance(WeatherSetting);
-		*wsOverride = *ws;
-
-		// Mark that it is an override.
-		wsOverride->markAsOverride();
-
-		ws->friend_getFinalOverride()->setNextOverride(wsOverride);
+		ws->createOverride(newInstance(WeatherSetting));
 	} else {
 		throw INI_INVALID_DATA;
 	}

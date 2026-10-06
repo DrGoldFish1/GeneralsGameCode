@@ -172,7 +172,7 @@ class AudioManager : public SubsystemInterface
 		virtual Bool isValidAudioEvent( AudioEventRTS *eventToCheck ) const;	///< validate that this piece of audio exists
 
 		// add tracks during INIification
-		void addTrackName( const AsciiString& trackName );
+		void addTrackName( const AsciiString& trackName, Bool levelSpecific = FALSE );
 		AsciiString nextTrackName(const AsciiString& currentTrack );
 		AsciiString prevTrackName(const AsciiString& currentTrack );
 
@@ -260,7 +260,7 @@ class AudioManager : public SubsystemInterface
 		virtual void appendAudioRequest( AudioRequest *request );
 		virtual void processRequestList();
 
-		virtual AudioEventInfo *newAudioEventInfo( AsciiString newEventName );
+		virtual AudioEventInfo *newAudioEventInfo( AsciiString newEventName, Bool createOverride = FALSE );
     virtual void addAudioEventInfo( AudioEventInfo * newEventInfo );
 		virtual AudioEventInfo *findAudioEventInfo( AsciiString eventName ) const;
 
@@ -331,6 +331,7 @@ class AudioManager : public SubsystemInterface
 		Coord3D m_listenerOrientation;
 		std::list<AudioRequest*> m_audioRequests;
 		std::vector<AsciiString> m_musicTracks;
+		std::vector<AsciiString> m_levelSpecificMusicTracks;
 
 		AudioEventInfoHash m_allAudioEventInfo;
 		AudioHandle theAudioHandlePool;

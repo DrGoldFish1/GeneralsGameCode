@@ -93,6 +93,18 @@ class Overridable : public MemoryPoolObject
 			return this;
 		}
 
+		// Creates a map-scoped replacement from the current final definition.
+		template <class T>
+		T *createOverride(T *replacement)
+		{
+			T *current = static_cast<T *>(friend_getFinalOverride());
+			*replacement = *current;
+			replacement->setNextOverride(nullptr);
+			replacement->markAsOverride();
+			current->setNextOverride(replacement);
+			return replacement;
+		}
+
 		// used by ini-parsing functions to mark specific Overridables as overrides
 		void markAsOverride()
 		{

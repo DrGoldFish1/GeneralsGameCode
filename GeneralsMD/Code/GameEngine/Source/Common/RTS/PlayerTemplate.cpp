@@ -257,6 +257,7 @@ const Image *PlayerTemplate::getEnabledImage() const
 
 //-----------------------------------------------------------------------------
 PlayerTemplateStore::PlayerTemplateStore()
+	: m_hasMapOverrides(FALSE)
 {
 	// nothing
 }
@@ -271,13 +272,19 @@ PlayerTemplateStore::~PlayerTemplateStore()
 void PlayerTemplateStore::init()
 {
 	m_playerTemplates.clear();
+	m_playerTemplatesBeforeMapOverrides.clear();
+	m_hasMapOverrides = FALSE;
 }
 
 //-----------------------------------------------------------------------------
 void PlayerTemplateStore::reset()
 {
-// don't reset this list here; we want to retain this info.
-//	m_playerTemplates.clear();
+	if (m_hasMapOverrides)
+	{
+		m_playerTemplates = m_playerTemplatesBeforeMapOverrides;
+		m_playerTemplatesBeforeMapOverrides.clear();
+		m_hasMapOverrides = FALSE;
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -386,6 +393,13 @@ void PlayerTemplateStore::getAllSideStrings(AsciiStringList *outStringList)
 //-------------------------------------------------------------------------------------------------
 /*static*/ void PlayerTemplateStore::parsePlayerTemplateDefinition( INI* ini )
 {
+	if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES && !ThePlayerTemplateStore->m_hasMapOverrides)
+	{
+		// TheSuperHackers @bugfix DrGoldFish1 20/10/2026 Restores player templates after map.ini overrides.
+		ThePlayerTemplateStore->m_playerTemplatesBeforeMapOverrides = ThePlayerTemplateStore->m_playerTemplates;
+		ThePlayerTemplateStore->m_hasMapOverrides = TRUE;
+	}
+
 	const char* c = ini->getNextToken();
 	NameKeyType namekey = NAMEKEY(c);
 

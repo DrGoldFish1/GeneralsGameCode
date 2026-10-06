@@ -590,15 +590,7 @@ LocomotorTemplate *LocomotorStore::newOverride( LocomotorTemplate *locoTemplate 
 {
 	if (locoTemplate == nullptr)
 		return nullptr;
-
-	// allocate new template
-	LocomotorTemplate *newTemplate = newInstance(LocomotorTemplate);
-
-	// copy data from final override to 'newTemplate' as a set of initial default values
-	*newTemplate = *locoTemplate;
-	locoTemplate->setNextOverride(newTemplate);
-
-	newTemplate->markAsOverride();
+	LocomotorTemplate *newTemplate = locoTemplate->createOverride(newInstance(LocomotorTemplate));
 
 	// return the newly created override for us to set values with etc
 	return newTemplate;

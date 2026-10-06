@@ -34,6 +34,7 @@
 #include "Common/INI.h"
 #include "Common/Snapshot.h"
 #include "Common/BitFlags.h"
+#include "Common/Overridable.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class Player;
@@ -156,7 +157,7 @@ extern const char *const TheUpgradeTypeNames[]; //Change above, change this!
 //-------------------------------------------------------------------------------------------------
 /** A single upgrade template definition */
 //-------------------------------------------------------------------------------------------------
-class UpgradeTemplate : public MemoryPoolObject
+class UpgradeTemplate : public Overridable
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( UpgradeTemplate, "UpgradeTemplate" )
@@ -171,19 +172,22 @@ public:
 
 	// field access
 	void setUpgradeName( const AsciiString& name ) { m_name = name; }
-	const AsciiString& getUpgradeName() const { return m_name; }
+	const AsciiString& getUpgradeName() const { return static_cast<const UpgradeTemplate*>(getFinalOverride())->m_name; }
 	void setUpgradeNameKey( NameKeyType key ) { m_nameKey = key; }
-	NameKeyType getUpgradeNameKey() const { return m_nameKey; }
-	const AsciiString& getDisplayNameLabel() const { return m_displayNameLabel; }
-	const UpgradeMaskType& getUpgradeMask() const { return m_upgradeMask; }
-	UpgradeType getUpgradeType() const { return m_type; }
-	const AudioEventRTS* getResearchCompleteSound() const { return &m_researchSound; }
-	const AudioEventRTS* getUnitSpecificSound() const { return &m_unitSpecificSound; }
-	AcademyClassificationType getAcademyClassificationType() const { return m_academyClassificationType; }
+	NameKeyType getUpgradeNameKey() const { return static_cast<const UpgradeTemplate*>(getFinalOverride())->m_nameKey; }
+	const AsciiString& getDisplayNameLabel() const { return static_cast<const UpgradeTemplate*>(getFinalOverride())->m_displayNameLabel; }
+	const UpgradeMaskType& getUpgradeMask() const { return static_cast<const UpgradeTemplate*>(getFinalOverride())->m_upgradeMask; }
+	UpgradeType getUpgradeType() const { return static_cast<const UpgradeTemplate*>(getFinalOverride())->m_type; }
+	const AudioEventRTS* getResearchCompleteSound() const { return &static_cast<const UpgradeTemplate*>(getFinalOverride())->m_researchSound; }
+	const AudioEventRTS* getUnitSpecificSound() const { return &static_cast<const UpgradeTemplate*>(getFinalOverride())->m_unitSpecificSound; }
+	AcademyClassificationType getAcademyClassificationType() const { return static_cast<const UpgradeTemplate*>(getFinalOverride())->m_academyClassificationType; }
 
 	/// inventory pictures
 	void cacheButtonImage();
-	const Image* getButtonImage() const { return m_buttonImage; }
+	const Image* getButtonImage() const { return ((const UpgradeTemplate *)getFinalOverride())->m_buttonImage; }
+	void markAsMapOnly() { m_isMapOnly = TRUE; }
+	void clearMapOnly() { m_isMapOnly = FALSE; }
+	Bool isMapOnly() const { return m_isMapOnly; }
 
 	/// INI parsing
 	const FieldParse *getFieldParse() const { return m_upgradeFieldParseTable; }
@@ -216,6 +220,7 @@ protected:
 
 	AsciiString m_buttonImageName;			///< "Queue" images to show in the build queue
 	const Image *m_buttonImage;
+	Bool m_isMapOnly;
 
 	/// INI field table
 	static const FieldParse m_upgradeFieldParseTable[];		///< the parse table
@@ -243,7 +248,9 @@ public:
 	const UpgradeTemplate *findUpgrade( const char* name ) const; ///< find and return upgrade by name
 	const UpgradeTemplate *findVeterancyUpgrade(VeterancyLevel level) const; ///< find and return upgrade by veterancy level
 
-	UpgradeTemplate *newUpgrade( const AsciiString& name );				///< allocate, link, and return new upgrade
+	UpgradeTemplate *newUpgrade( const AsciiString& name );
+	UpgradeTemplate *newUpgradeOverride( UpgradeTemplate *upgrade );				///< allocate, link, and return new upgrade
+	void refreshButtonImages();
 
 	/// does this player have all the necessary things to make this upgrade
 	Bool canAffordUpgrade( Player *player, const UpgradeTemplate *upgradeTemplate, Bool displayReason = FALSE ) const;

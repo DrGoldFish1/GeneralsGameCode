@@ -226,6 +226,8 @@ private:
 	typedef std::vector<PlayerTemplate> PlayerTemplateVector;
 
 	PlayerTemplateVector m_playerTemplates;
+	PlayerTemplateVector m_playerTemplatesBeforeMapOverrides;
+	Bool m_hasMapOverrides;
 };
 
 // ----------------------------------------------------------------------------------------------

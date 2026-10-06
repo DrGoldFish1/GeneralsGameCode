@@ -186,26 +186,16 @@ const ScienceInfo* ScienceStore::findScienceInfo(ScienceType st) const
 
 		if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES)
 		{
-			ScienceInfo* newInfo = newInstance(ScienceInfo);
-
 			if (info == nullptr)
 			{
 				// only add if it's not overriding an existing one.
-				info = newInfo;
+				info = newInstance(ScienceInfo);
 				info->markAsOverride();	// yep, so we will get cleared on reset()
 				TheScienceStore->m_sciences.push_back(info);
 			}
 			else
 			{
-				// copy data from final override to 'newInfo' as a set of initial default values
-				info = (ScienceInfo*)(info->friend_getFinalOverride());
-
-				*newInfo = *info;
-				info->setNextOverride(newInfo);
-				newInfo->markAsOverride();	// must do AFTER the copy
-
-				// use the newly created override for us to set values with etc
-				info = newInfo;
+				info = info->createOverride(newInstance(ScienceInfo));
 				//TheScienceStore->m_sciences.push_back(info);	// NO, BAD, WRONG -- don't add in this case.
 			}
 		}

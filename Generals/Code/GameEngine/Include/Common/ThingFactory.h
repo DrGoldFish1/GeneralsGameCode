@@ -71,13 +71,13 @@ public:
 
 	/**
 		Get a template by database name. Returns null if not found.
-		Does not resolve the final override.
+		Resolves the final override.
 	*/
-	const ThingTemplate *findTemplate( const AsciiString& name, Bool check = TRUE ) { return findTemplateInternal( name, check ); }
+	const ThingTemplate *findTemplate( const AsciiString& name, Bool check = TRUE );
 
 	/**
 		Get a template by ID. Returns null if not found.
-		Does not resolve the final override.
+		Resolves the final override.
 	*/
 	const ThingTemplate *findByTemplateID( UnsignedShort id );
 

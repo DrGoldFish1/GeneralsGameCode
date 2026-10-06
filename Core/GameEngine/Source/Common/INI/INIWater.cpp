@@ -92,13 +92,7 @@ void INI::parseWaterTransparencyDefinition( INI *ini )
 		TheWaterTransparency = newInstance(WaterTransparencySetting);
 	} else if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES) {
 		WaterTransparencySetting* wt = (WaterTransparencySetting*) (TheWaterTransparency.getNonOverloadedPointer());
-		WaterTransparencySetting* wtOverride = newInstance(WaterTransparencySetting);
-		*wtOverride = *wt;
-
-		// Mark that it is an override.
-		wtOverride->markAsOverride();
-
-		wt->friend_getFinalOverride()->setNextOverride(wtOverride);
+		wt->createOverride(newInstance(WaterTransparencySetting));
 	} else {
 		throw INI_INVALID_DATA;
 	}

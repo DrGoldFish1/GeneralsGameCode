@@ -116,9 +116,7 @@ EMPTY_DTOR(ObjectCreationNugget)
 	strange side-effects. Instead, the system will have to be enhanced to allow for multiple instances
 	of each ObjectCreationNugget.
 
-	-- Unlike most other game systems, ObjectCreationList can't be overridden by subsequent INI file
-	loads. This isn't really a problem, because all you really need to do to "override" one is to
-	specify a different one.
+	-- ObjectCreationLists may be overridden by map.ini files and are restored when the map resets.
 */
 class ObjectCreationList
 {
@@ -190,7 +188,7 @@ public:
 	virtual ~ObjectCreationListStore() override;
 
 	virtual void init() override { }
-	virtual void reset() override { }
+	virtual void reset() override;
 	virtual void update() override { }
 
 	/**
@@ -207,10 +205,14 @@ private:
 
 	typedef std::map< NameKeyType, ObjectCreationList, std::less<NameKeyType>/**/> ObjectCreationListMap;
 	ObjectCreationListMap m_ocls;
+	ObjectCreationListMap m_originalOcls;
+	Bool m_hasOverrides;
+	Bool m_isLoadingOverrides;
 
 	// note, this list doesn't own the nuggets; all nuggets are owned by the Store.
 	typedef std::vector<ObjectCreationNugget*> ObjectCreationNuggetVector;
 	ObjectCreationNuggetVector m_nuggets;
+	ObjectCreationNuggetVector m_overrideNuggets;
 
 };
 
