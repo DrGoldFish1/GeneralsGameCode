@@ -34,6 +34,7 @@
 #include "Common/INI.h"
 #include "Common/Snapshot.h"
 #include "Common/BitFlags.h"
+#include "Common/Overridable.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class Player;
@@ -156,7 +157,7 @@ extern const char *const TheUpgradeTypeNames[]; //Change above, change this!
 //-------------------------------------------------------------------------------------------------
 /** A single upgrade template definition */
 //-------------------------------------------------------------------------------------------------
-class UpgradeTemplate : public MemoryPoolObject
+class UpgradeTemplate : public Overridable
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( UpgradeTemplate, "UpgradeTemplate" )
@@ -183,7 +184,10 @@ public:
 
 	/// inventory pictures
 	void cacheButtonImage();
-	const Image* getButtonImage() const { return m_buttonImage; }
+	const Image* getButtonImage() const { return ((const UpgradeTemplate *)getFinalOverride())->m_buttonImage; }
+	void markAsMapOnly() { m_isMapOnly = TRUE; }
+	void clearMapOnly() { m_isMapOnly = FALSE; }
+	Bool isMapOnly() const { return m_isMapOnly; }
 
 	/// INI parsing
 	const FieldParse *getFieldParse() const { return m_upgradeFieldParseTable; }
@@ -216,6 +220,7 @@ protected:
 
 	AsciiString m_buttonImageName;			///< "Queue" images to show in the build queue
 	const Image *m_buttonImage;
+	Bool m_isMapOnly;
 
 	/// INI field table
 	static const FieldParse m_upgradeFieldParseTable[];		///< the parse table
@@ -243,7 +248,8 @@ public:
 	const UpgradeTemplate *findUpgrade( const char* name ) const; ///< find and return upgrade by name
 	const UpgradeTemplate *findVeterancyUpgrade(VeterancyLevel level) const; ///< find and return upgrade by veterancy level
 
-	UpgradeTemplate *newUpgrade( const AsciiString& name );				///< allocate, link, and return new upgrade
+	UpgradeTemplate *newUpgrade( const AsciiString& name );
+	UpgradeTemplate *newUpgradeOverride( UpgradeTemplate *upgrade );				///< allocate, link, and return new upgrade
 
 	/// does this player have all the necessary things to make this upgrade
 	Bool canAffordUpgrade( Player *player, const UpgradeTemplate *upgradeTemplate, Bool displayReason = FALSE ) const;

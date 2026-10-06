@@ -66,6 +66,21 @@ Upgrade::Upgrade( const UpgradeTemplate *upgradeTemplate )
 }
 
 //-------------------------------------------------------------------------------------------------
+/** Allocate an override for an existing upgrade */
+//-------------------------------------------------------------------------------------------------
+UpgradeTemplate *UpgradeCenter::newUpgradeOverride( UpgradeTemplate *upgrade )
+{
+	UpgradeTemplate *finalUpgrade = (UpgradeTemplate *)upgrade->friend_getFinalOverride();
+	UpgradeTemplate *overrideUpgrade = newInstance( UpgradeTemplate );
+	*overrideUpgrade = *finalUpgrade;
+	overrideUpgrade->setNextOverride( nullptr );
+	overrideUpgrade->clearMapOnly();
+	overrideUpgrade->markAsOverride();
+	finalUpgrade->setNextOverride( overrideUpgrade );
+	return overrideUpgrade;
+}
+
+//-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 Upgrade::~Upgrade()
 {
@@ -138,6 +153,7 @@ UpgradeTemplate::UpgradeTemplate()
 	m_next = nullptr;
 	m_prev = nullptr;
 	m_buttonImage = nullptr;
+	m_isMapOnly = FALSE;
 	m_academyClassificationType = ACT_NONE;
 
 }
@@ -162,7 +178,7 @@ Int UpgradeTemplate::calcTimeToBuild( Player *player ) const
 #endif
 
 	///@todo modify this by power state of player
-	return m_buildTime * LOGICFRAMES_PER_SECOND;
+	return ((const UpgradeTemplate *)getFinalOverride())->m_buildTime * LOGICFRAMES_PER_SECOND;
 
 }
 
@@ -173,7 +189,7 @@ Int UpgradeTemplate::calcCostToBuild( Player *player ) const
 {
 
 	///@todo modify this by any player handicaps
-	return m_cost;
+	return ((const UpgradeTemplate *)getFinalOverride())->m_cost;
 
 }
 
@@ -281,7 +297,24 @@ void UpgradeCenter::init()
 //-------------------------------------------------------------------------------------------------
 void UpgradeCenter::reset()
 {
-	if( TheMappedImageCollection && !buttonImagesCached )
+	UpgradeTemplate *upgrade = m_upgradeList;
+	while( upgrade )
+	{
+		UpgradeTemplate *next = upgrade->friend_getNext();
+		if( upgrade->isMapOnly() )
+		{
+			unlinkUpgrade( upgrade );
+			deleteInstance( upgrade );
+		}
+		else
+		{
+			upgrade->deleteOverrides();
+		}
+		upgrade = next;
+	}
+
+	buttonImagesCached = FALSE;
+	if( TheMappedImageCollection )
 	{
 		UpgradeTemplate *upgrade;
 		for( upgrade = m_upgradeList; upgrade; upgrade = upgrade->friend_getNext() )
@@ -311,7 +344,7 @@ UpgradeTemplate *UpgradeCenter::findNonConstUpgradeByKey( NameKeyType key )
 	// search list
 	for( upgrade = m_upgradeList; upgrade; upgrade = upgrade->friend_getNext() )
 		if( upgrade->getUpgradeNameKey() == key )
-			return upgrade;
+			return (UpgradeTemplate *)upgrade->friend_getFinalOverride();
 
 	// item not found
 	return nullptr;
@@ -370,7 +403,11 @@ UpgradeTemplate *UpgradeCenter::newUpgrade( const AsciiString& name )
 	// copy data from the default upgrade
 	const UpgradeTemplate *defaultUpgrade = findUpgrade( "DefaultUpgrade" );
 	if( defaultUpgrade )
+	{
 		*newUpgrade = *defaultUpgrade;
+		newUpgrade->setNextOverride( nullptr );
+		newUpgrade->clearMapOnly();
+	}
 
 	// assign name and starting data
 	newUpgrade->setUpgradeName( name );
@@ -488,7 +525,13 @@ void UpgradeCenter::parseUpgradeDefinition( INI *ini )
 
 		// allocate a new item
 		upgrade = TheUpgradeCenter->newUpgrade( name );
+		if( ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES )
+			upgrade->markAsMapOnly();
 
+	}
+	else if( ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES )
+	{
+		upgrade = TheUpgradeCenter->newUpgradeOverride( upgrade );
 	}
 
 	// sanity
