@@ -248,7 +248,7 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 //-------------------------------------------------------------------------------------------------
-WeaponTemplate::WeaponTemplate() : m_nextTemplate(nullptr)
+WeaponTemplate::WeaponTemplate()
 {
 
 	m_name													= "NoNameWeapon";
@@ -330,8 +330,6 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(nullptr)
 //-------------------------------------------------------------------------------------------------
 WeaponTemplate::~WeaponTemplate()
 {
-	deleteInstance(m_nextTemplate);
-
 	// delete any extra-bonus that's present
 	deleteInstance(m_extraBonus);
 }
@@ -419,7 +417,7 @@ void WeaponTemplate::postProcessLoad()
 	else
 	{
 		m_projectileTmpl = TheThingFactory->findTemplate(m_projectileName);
-		DEBUG_ASSERTCRASH(m_projectileTmpl, ("projectile %s not found!",m_projectileName.str()));
+		DEBUG_ASSERTCRASH(m_projectileTmpl, ("projectile %s not found!", m_projectileName.str()));
 
 #ifdef DEBUG_LOGGING
 		if (m_projectileTmpl && m_primaryDamage > 0.0)
@@ -1644,7 +1642,7 @@ const WeaponTemplate *WeaponStore::findWeaponTemplate( const AsciiString& name )
 		return nullptr;
 	const WeaponTemplate * wt = findWeaponTemplatePrivate( TheNameKeyGenerator->nameToKey( name ) );
 	DEBUG_ASSERTCRASH(wt != nullptr, ("Weapon %s not found!", name.str()));
-	return wt;
+	return wt ? static_cast<const WeaponTemplate*>(wt->getFinalOverride()) : nullptr;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1654,7 +1652,7 @@ const WeaponTemplate *WeaponStore::findWeaponTemplate( const char* name ) const
 		return nullptr;
 	const WeaponTemplate * wt = findWeaponTemplatePrivate( TheNameKeyGenerator->nameToKey( name ) );
 	DEBUG_ASSERTCRASH(wt != nullptr, ("Weapon %s not found!",name));
-	return wt;
+	return wt ? static_cast<const WeaponTemplate*>(wt->getFinalOverride()) : nullptr;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1693,10 +1691,17 @@ WeaponTemplate *WeaponStore::newOverride(WeaponTemplate *weaponTemplate)
 	if (!weaponTemplate)
 		return nullptr;
 
-	// allocate a new weapon
+	// TheSuperHackers @bugfix DrGoldFish 10/10/2026 Keep existing weapon template references valid when applying map overrides.
+	// Create a new override rather than replacing the base template.
 	WeaponTemplate *wt = newInstance(WeaponTemplate);
 	(*wt) = (*weaponTemplate);
-	(wt)->friend_setNextTemplate(weaponTemplate);
+	if (weaponTemplate->m_extraBonus)
+	{
+		wt->m_extraBonus = newInstance(WeaponBonusSet);
+		(*wt->m_extraBonus) = (*weaponTemplate->m_extraBonus);
+	}
+	weaponTemplate->setNextOverride(wt);
+	wt->markAsOverride();
 
 	return wt;
 }
@@ -1742,15 +1747,19 @@ void WeaponStore::resetWeaponTemplates()
 //-------------------------------------------------------------------------------------------------
 void WeaponStore::reset()
 {
-	// clean up any overrides.
-	for (size_t i = 0; i < m_weaponTemplateVector.size(); ++i)
+	// Clean up map and solo INI overrides.
+	for (std::vector<WeaponTemplate*>::iterator it = m_weaponTemplateVector.begin(); it != m_weaponTemplateVector.end(); )
 	{
-		WeaponTemplate *wt = m_weaponTemplateVector[i];
-		if (wt->isOverride())
+		WeaponTemplate *wt = *it;
+		NameKeyType nameKey = wt->getNameKey();
+		if (!wt->deleteOverrides())
 		{
-			WeaponTemplate *overrideData = wt;
-			wt = wt->friend_clearNextTemplate();
-			deleteInstance(overrideData);
+			m_weaponTemplateHashMap.erase(nameKey);
+			it = m_weaponTemplateVector.erase(it);
+		}
+		else
+		{
+			++it;
 		}
 	}
 
@@ -1815,6 +1824,8 @@ void WeaponStore::postProcessLoad()
 	{
 		// no item is present, create a new one
 		weapon = TheWeaponStore->newWeaponTemplate(name);
+		if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES)
+			weapon->markAsOverride();
 	}
 
 	// parse the ini weapon definition
@@ -1822,6 +1833,11 @@ void WeaponStore::postProcessLoad()
 
 	if (weapon->m_projectileName.isNone())
 		weapon->m_projectileName.clear();
+
+	if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES)
+	{
+		weapon->postProcessLoad();
+	}
 
 #if defined(RTS_DEBUG)
 	if (!weapon->getFireSound().getEventName().isEmpty() && weapon->getFireSound().getEventName().compareNoCase("NoSound") != 0)

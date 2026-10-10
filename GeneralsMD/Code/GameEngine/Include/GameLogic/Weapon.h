@@ -32,6 +32,7 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/AudioEventRTS.h"
 #include "Common/GameCommon.h"
+#include "Common/Overridable.h"
 
 #include "GameLogic/Damage.h"
 
@@ -339,7 +340,7 @@ struct HistoricWeaponDamageInfo
 typedef std::list<HistoricWeaponDamageInfo> HistoricWeaponDamageList;
 
 //-------------------------------------------------------------------------------------------------
-class WeaponTemplate : public MemoryPoolObject
+class WeaponTemplate : public Overridable
 {
 	friend class WeaponStore;
 
@@ -351,10 +352,6 @@ public:
 	// virtual destructor declared by memory pool
 
 	void reset();
-
-	void friend_setNextTemplate(WeaponTemplate *nextTemplate) { m_nextTemplate = nextTemplate; }
-	WeaponTemplate *friend_clearNextTemplate() {	WeaponTemplate *ret = m_nextTemplate; m_nextTemplate = nullptr; return ret; }
-	Bool isOverride() { return m_nextTemplate != nullptr; }
 
 	/// field table for loading the values from an INI
 	const FieldParse *getFieldParse() const { return TheWeaponTemplateFieldParseTable; }
@@ -482,9 +479,6 @@ protected:
 	void processHistoricDamage(const Object* source, const Coord3D* pos) const;
 
 private:
-
-	// NOTE: m_nextTemplate will be cleaned up if it is NON-nullptr.
-	WeaponTemplate *m_nextTemplate;
 
 	static void parseWeaponBonusSet( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ );
 	static void parseScatterTarget( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ );
@@ -846,7 +840,7 @@ public:
 	// this dynamically allocates a new Weapon, which is owned (and must be freed!) by the caller.
 	Weapon* allocateNewWeapon(const WeaponTemplate *tmpl, WeaponSlotType wslot) const
 	{
-		return newInstance(Weapon)(tmpl, wslot);	// my, that was easy
+		return newInstance(Weapon)(static_cast<const WeaponTemplate*>(tmpl->getFinalOverride()), wslot);	// my, that was easy
 	}
 
 	void createAndFireTempWeapon(const WeaponTemplate* w, const Object *source, const Coord3D* pos);

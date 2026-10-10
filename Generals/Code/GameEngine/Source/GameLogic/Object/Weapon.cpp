@@ -405,7 +405,7 @@ void WeaponTemplate::postProcessLoad()
 	else
 	{
 		m_projectileTmpl = TheThingFactory->findTemplate(m_projectileName);
-		DEBUG_ASSERTCRASH(m_projectileTmpl, ("projectile %s not found!",m_projectileName.str()));
+		DEBUG_ASSERTCRASH(m_projectileTmpl, ("projectile %s not found!", m_projectileName.str()));
 
 #ifdef DEBUG_LOGGING
 		if (m_projectileTmpl && m_primaryDamage > 0.0)
@@ -1558,10 +1558,11 @@ WeaponTemplate *WeaponStore::newOverride(WeaponTemplate *weaponTemplate)
 	if (!weaponTemplate)
 		return nullptr;
 
-	// allocate a new weapon
+	// TheSuperHackers @bugfix DrGoldFish 10/10/2026 Keep existing weapon template references valid when applying map overrides.
+	// Allocate a backup while the original template remains the active instance.
 	WeaponTemplate *wt = newInstance(WeaponTemplate);
 	(*wt) = (*weaponTemplate);
-	(wt)->friend_setNextTemplate(weaponTemplate);
+	weaponTemplate->friend_setNextTemplate(wt);
 
 	return wt;
 }
@@ -1611,14 +1612,16 @@ void WeaponStore::reset()
 	for (size_t i = 0; i < m_weaponTemplateVector.size(); ++i)
 	{
 		WeaponTemplate *wt = m_weaponTemplateVector[i];
-		if (wt->isOverride())
+		while (wt->isOverride())
 		{
-			WeaponTemplate *overrideData = wt;
-			wt = wt->friend_clearNextTemplate();
+			WeaponTemplate *overrideData = wt->friend_clearNextTemplate();
+			WeaponTemplate *previousOverride = overrideData->friend_clearNextTemplate();
+			(*wt) = (*overrideData);
+			wt->friend_setNextTemplate(previousOverride);
+			overrideData->m_extraBonus = nullptr;
 			deleteInstance(overrideData);
 		}
 	}
-
 	deleteAllDelayedDamage();
 	resetWeaponTemplates();
 }
@@ -1658,6 +1661,7 @@ void WeaponStore::postProcessLoad()
 /*static*/ void WeaponStore::parseWeaponTemplateDefinition(INI* ini)
 {
 	AsciiString name;
+	WeaponTemplate *overrideTarget = nullptr;
 
 	// read the weapon name
 	const char* c = ini->getNextToken();
@@ -1668,7 +1672,10 @@ void WeaponStore::postProcessLoad()
 	if (weapon)
 	{
 		if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES)
+		{
+			overrideTarget = weapon;
 			weapon = TheWeaponStore->newOverride(weapon);
+		}
 		else
 		{
 			DEBUG_CRASH(("Weapon '%s' already exists, but OVERRIDE not specified", c));
@@ -1687,6 +1694,17 @@ void WeaponStore::postProcessLoad()
 
 	if (weapon->m_projectileName.isNone())
 		weapon->m_projectileName.clear();
+
+	if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES)
+	{
+		weapon->postProcessLoad();
+	}
+
+	if (overrideTarget)
+	{
+		(*overrideTarget) = (*weapon);
+		overrideTarget->friend_setNextTemplate(weapon);
+	}
 
 #if defined(RTS_DEBUG)
 	if (!weapon->getFireSound().getEventName().isEmpty() && weapon->getFireSound().getEventName().compareNoCase("NoSound") != 0)
