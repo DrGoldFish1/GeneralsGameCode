@@ -434,7 +434,8 @@ private:
 		DOING_THREE_POINT_TURN,	// If we are doing a 3 pt turn.
 		CLIMBING,								// If we are in the process of climbing.
 		IS_CLOSE_ENOUGH_DIST_3D,
-		OFFSET_INCREASING
+		OFFSET_INCREASING,
+		MIN_TURN_SPEED_DISABLED
 	};
 
 	Bool getFlag(LocoFlag f) const { return (m_flags & (1 << f)) != 0; }

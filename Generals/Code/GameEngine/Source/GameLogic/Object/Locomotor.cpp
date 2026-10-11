@@ -783,6 +783,7 @@ void Locomotor::startMove()
 {
 	// Reset the donut timer.
 	m_donutTimer = TheGameLogic->getFrame()+DONUT_TIME_DELAY_SECONDS*LOGICFRAMES_PER_SECOND;
+	setFlag(MIN_TURN_SPEED_DISABLED, false);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1189,7 +1190,8 @@ void Locomotor::moveTowardsPositionTreads(Object* obj, PhysicsBehavior *physics,
 	// Modulate speed according to turning. The more we have to turn, the slower we go
 	//
 	const Real QUAETERPI = PI / 4.0f;
-	Real angleCoeff = (Real)fabs( relAngle ) / QUAETERPI;
+	Real absRelAngle = (Real)fabs(relAngle);
+	Real angleCoeff = absRelAngle / QUAETERPI;
 	if (angleCoeff > 1.0f)
 		angleCoeff = 1.0;
 
@@ -1200,9 +1202,14 @@ void Locomotor::moveTowardsPositionTreads(Object* obj, PhysicsBehavior *physics,
 
 	Real goalSpeed = (1.0f - angleCoeff) * desiredSpeed;
 
+	// TheSuperHackers @bugfix DrGoldFish1 11/10/2026 Allows map.ini and solo.ini MinTurnSpeed overrides for tracked units without moving forward during turns above 75 degrees and restores it at 45 degrees.
+	if (absRelAngle > PI * 5.0f / 12.0f)
+		setFlag(MIN_TURN_SPEED_DISABLED, true);
+	else if (absRelAngle <= QUAETERPI)
+		setFlag(MIN_TURN_SPEED_DISABLED, false);
 
-//	if (speed < m_minTurnSpeed)
-//		speed = m_minTurnSpeed;
+	if (!getFlag(MIN_TURN_SPEED_DISABLED) && m_template->m_minTurnSpeed < BIGNUM && goalSpeed < m_template->m_minTurnSpeed)
+		goalSpeed = m_template->m_minTurnSpeed;
 
 	Real actualSpeed = physics->getForwardSpeed2D();
 	Real slowDownTime = actualSpeed / getBraking();
