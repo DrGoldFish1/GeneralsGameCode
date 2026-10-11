@@ -458,6 +458,8 @@ void MilesAudioManager::reset()
   // This must come after stopAllAudioImmediately() and removeAllAudioRequests(), to ensure that
   // sounds pointing to the temporary AudioEventInfo handles are deleted before their info is deleted
   removeLevelSpecificAudioEventInfos();
+	// TheSuperHackers @bugfix DrGoldFish 11/10/2026 Restore audio definitions overridden by map.ini and solo.ini.
+	restoreMapAudioState();
 }
 
 //-------------------------------------------------------------------------------------------------

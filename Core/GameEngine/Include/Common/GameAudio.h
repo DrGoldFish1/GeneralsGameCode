@@ -264,6 +264,9 @@ class AudioManager : public SubsystemInterface
     virtual void addAudioEventInfo( AudioEventInfo * newEventInfo );
 		virtual AudioEventInfo *findAudioEventInfo( AsciiString eventName ) const;
 
+		void saveMapAudioState();
+		void restoreMapAudioState();
+
 		const AudioSettings *getAudioSettings() const;
 		const MiscAudio *getMiscAudio() const;
 
@@ -333,6 +336,10 @@ class AudioManager : public SubsystemInterface
 		std::vector<AsciiString> m_musicTracks;
 
 		AudioEventInfoHash m_allAudioEventInfo;
+		AudioEventInfoHash m_mapAudioEventInfo;
+		AudioSettings *m_mapAudioSettings;
+		MiscAudio *m_mapMiscAudio;
+		std::vector<AsciiString> m_mapMusicTracks;
 		AudioHandle theAudioHandlePool;
 		std::list<std::pair<AsciiString, Real>/**/> m_adjustedVolumes;
 

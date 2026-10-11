@@ -176,6 +176,8 @@ AudioManager::AudioManager() :
 	theAudioHandlePool = AHSV_FirstHandle;
 	m_audioSettings = NEW AudioSettings;
 	m_miscAudio = NEW MiscAudio;
+	m_mapAudioSettings = nullptr;
+	m_mapMiscAudio = nullptr;
 	m_silentAudioEvent = NEW AudioEventRTS;
 	m_savedValues = nullptr;
 	m_muteReasonBits = 0;
@@ -193,6 +195,11 @@ AudioManager::~AudioManager()
 	}
 	m_allAudioEventInfo.clear();
 
+	for (it = m_mapAudioEventInfo.begin(); it != m_mapAudioEventInfo.end(); ++it) {
+		deleteInstance((*it).second);
+	}
+	m_mapAudioEventInfo.clear();
+
 	delete m_silentAudioEvent;
 	m_silentAudioEvent = nullptr;
 
@@ -205,8 +212,14 @@ AudioManager::~AudioManager()
 	delete m_miscAudio;
 	m_miscAudio = nullptr;
 
+	delete m_mapMiscAudio;
+	m_mapMiscAudio = nullptr;
+
 	delete m_audioSettings;
 	m_audioSettings = nullptr;
+
+	delete m_mapAudioSettings;
+	m_mapAudioSettings = nullptr;
 
 	delete [] m_savedValues;
 }
@@ -882,6 +895,59 @@ AudioEventInfo *AudioManager::findAudioEventInfo( AsciiString eventName ) const
 }
 
 //-------------------------------------------------------------------------------------------------
+void AudioManager::saveMapAudioState()
+{
+	if (m_mapAudioSettings) {
+		return;
+	}
+
+	m_mapAudioSettings = NEW AudioSettings(*m_audioSettings);
+	m_mapMiscAudio = NEW MiscAudio(*m_miscAudio);
+	m_mapMusicTracks = m_musicTracks;
+
+	for (AudioEventInfoHashIt it = m_allAudioEventInfo.begin(); it != m_allAudioEventInfo.end(); ++it) {
+		m_mapAudioEventInfo[(*it).first] = newInstance(AudioEventInfo)(*(*it).second);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void AudioManager::restoreMapAudioState()
+{
+	if (!m_mapAudioSettings) {
+		return;
+	}
+
+	for (AudioEventInfoHashIt it = m_allAudioEventInfo.begin(); it != m_allAudioEventInfo.end(); ) {
+		AudioEventInfoHashIt saved = m_mapAudioEventInfo.find((*it).first);
+		if (saved == m_mapAudioEventInfo.end()) {
+			deleteInstance((*it).second);
+			m_allAudioEventInfo.erase(it++);
+		}
+		else {
+			*(*it).second = *(*saved).second;
+			deleteInstance((*saved).second);
+			m_mapAudioEventInfo.erase(saved);
+			++it;
+		}
+	}
+
+	for (AudioEventInfoHashIt it = m_mapAudioEventInfo.begin(); it != m_mapAudioEventInfo.end(); ++it) {
+		m_allAudioEventInfo[(*it).first] = (*it).second;
+	}
+	m_mapAudioEventInfo.clear();
+
+	*m_audioSettings = *m_mapAudioSettings;
+	*m_miscAudio = *m_mapMiscAudio;
+	m_musicTracks = m_mapMusicTracks;
+
+	delete m_mapAudioSettings;
+	m_mapAudioSettings = nullptr;
+	delete m_mapMiscAudio;
+	m_mapMiscAudio = nullptr;
+	m_mapMusicTracks.clear();
+}
+
+//-------------------------------------------------------------------------------------------------
 // Remove all AudioEventInfo's with the m_isLevelSpecific flag
 void AudioManager::removeLevelSpecificAudioEventInfos()
 {
@@ -1111,6 +1177,10 @@ void AudioManager::unmuteAudio( MuteAudioReason reason )
 //-------------------------------------------------------------------------------------------------
 void INI::parseAudioSettingsDefinition( INI *ini )
 {
+	if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES) {
+		TheAudio->saveMapAudioState();
+	}
+
 	ini->initFromINI(TheAudio->friend_getAudioSettings(), TheAudio->getFieldParseTable());
 
 	// time to override the volume settings, default 3-D provider, and speaker setup with the

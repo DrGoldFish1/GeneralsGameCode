@@ -42,6 +42,10 @@ AudioEventInfo::~AudioEventInfo()
 //-------------------------------------------------------------------------------------------------
 void INI::parseMusicTrackDefinition( INI* ini )
 {
+	if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES) {
+		TheAudio->saveMapAudioState();
+	}
+
 	AsciiString name;
 	AudioEventInfo *track;
 
@@ -70,6 +74,10 @@ void INI::parseMusicTrackDefinition( INI* ini )
 //-------------------------------------------------------------------------------------------------
 void INI::parseAudioEventDefinition( INI* ini )
 {
+	if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES) {
+		TheAudio->saveMapAudioState();
+	}
+
 	AsciiString name;
 	AudioEventInfo *track;
 
@@ -97,6 +105,10 @@ void INI::parseAudioEventDefinition( INI* ini )
 //-------------------------------------------------------------------------------------------------
 void INI::parseDialogDefinition( INI* ini )
 {
+	if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES) {
+		TheAudio->saveMapAudioState();
+	}
+
 	AsciiString name;
 	AudioEventInfo *track;
 

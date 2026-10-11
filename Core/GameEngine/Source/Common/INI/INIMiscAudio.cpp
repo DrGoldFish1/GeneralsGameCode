@@ -74,5 +74,9 @@ const FieldParse MiscAudio::m_fieldParseTable[] =
 //-------------------------------------------------------------------------------------------------
 void INI::parseMiscAudio( INI *ini )
 {
+	if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES) {
+		TheAudio->saveMapAudioState();
+	}
+
 	ini->initFromINI(TheAudio->friend_getMiscAudio(), MiscAudio::m_fieldParseTable);
 }
